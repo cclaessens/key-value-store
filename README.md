@@ -31,7 +31,7 @@ With 87 ms for 5 threads doing 100 put and get operations each the performance m
 
 ## Comments on design choices
 
-- **SQL**: In the Project 8 experiment our slow controls software use PostgreSQL for logging all sensor readout. Choosing something lighter for a smaller scale project brought me to sqlite3, which conveniently is already a standard library in python. While I am not hugely familar with SQL, using the basic commands for this example was easy enough.
+- **SQL**: In our experiment our slow controls software use PostgreSQL for logging all sensor readout. Choosing something lighter for a smaller scale project brought me to sqlite3, which conveniently is already a standard library in python and very easy to use. 
 - **Database configuration**: I used the Write-Ahead Logging mode. From a quick research I learned that this way, changes are first written to a log and readers can still read the database file in the meantime. I also set synchronous setting to OFF. This way, speed is further increased at the risk of loosing data during a crash or power loss. The database itself is still persistent during a software crash.
 - **multi-threading**: In the test script multiple threads are created to test parallel operations on the database. However, in Python, only one thread is allowed to execute at a time in the interpreter. In this case this may actually be an advantage because it avoids conflict for resource access, which may actually make the test faster. 
 - **thread locks**: Multiple operations on the same instance or space in memory must be prevented. Using Lock from the threading package in python provides this functionality.
