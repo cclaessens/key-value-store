@@ -4,10 +4,11 @@ import sys
 import threading
 import os
 
+# import the KeyValueStore class
 from src.key_value_store import KeyValueStore
 
 class TestKeyValueStore(unittest.TestCase):
-    db_path = "test_kv_store.db"  # database path
+    db_path = "test_kv_store.db"  # database path to enable persistence test
     
     @classmethod
     def setUpClass(cls):
@@ -29,17 +30,19 @@ class TestKeyValueStore(unittest.TestCase):
         """Close KeyValueStore instance after each test."""
         self.store.close()
 
-    # test basic functionality
     def test_put_get(self):
+        """Test that the store can put and get a key-value pair."""
         self.store.put("key", "value")
         self.assertEqual(self.store.get("key"), "value")
 
     def test_put_delete(self):
+        """Test that the store can put and delete a key-value pair."""
         self.store.put("key", "value")
         self.store.delete("key")
         self.assertIsNone(self.store.get("key"))
         
     def test_update_value(self):
+        """Change the value and read the most recent one."""
         key = "testkey"
         value1 = "value1"
         value2 = "value2"
@@ -48,29 +51,35 @@ class TestKeyValueStore(unittest.TestCase):
         result = self.store.get(key)
         self.assertEqual(result, value2)
         
-    # test persistence
     def test_persistence(self):
+        """Test that the store can persist data between instances."""
+        
+        # create a new instance of KeyValueStore
         store = KeyValueStore(self.db_path)
-        # get persistent value stored by different instance of KeyValueStore
+        # get persistent value stored by earlier instance of KeyValueStore
         self.assertEqual(store.get("persist_key"), "persist_value")
         print("\nRead value stored by different instance of KeyValueStore")
         store.close()
 
-    # test requirement of several operations per ms with order 100kB value size
-    # also check that the value stored ny the last thread is the one that remains
     def test_concurrent_get_and_put(self):
-        
-        # keep track of the last thread id
+        """ Test the goal of several operations per ms with order 100s of kB value size.
+            Also check that the value stored by the last thread is the one that remains"""
+            
+        # For keeping track of the last thread id use a mutable list
         last_thread_id = [None]
         
-        # using variables of order 100kB size
-        var = "a" * 100000
-        print(f"Size of variable: {round(sys.getsizeof(var) / 1024)}KB")
+        # Using variables of > 100kB size
+        var = "a" * 200000
+        print(f"Size of variable: {round(sys.getsizeof(var) / 1024)}kB")
         
         # Define a function for the thread to run
         def put_and_get(i):
-            self.store.put("key", var + str(i))
-            self.store.get("key")
+            # put and get 100 times
+            for _ in range(100):
+                self.store.put("key", var + str(i))
+                self.store.get("key")
+                
+            # Update the last thread id. This is a shared variable
             last_thread_id[0] = i
 
         # Create 5 threads that run the put_and_get function
@@ -87,12 +96,13 @@ class TestKeyValueStore(unittest.TestCase):
 
         # Check that the final value is correct
         end_time = time.time()
-        print(f"Time taken by {len(threads)} threads to put and get 100kB values: {(end_time - start_time)*1e3} ms")
+        print(f"Time taken by {len(threads)} threads to put and get 200kB values 100 times: {round((end_time - start_time)*1e3)} ms")
         print(f"Last thread to write: {last_thread_id[0]}")
         self.assertEqual(self.store.get("key"), var + str(last_thread_id[0]))
 
-# the assignment mentiones that for the profile of usage write skew is expected
+# The assignment mentiones that for the profile of usage write skew is expected
 class TestWriteSkew(unittest.TestCase):
+    """New test for write skew in the KeyValueStore class."""
     db_path = 'test_kv_store.db'
 
     @classmethod
